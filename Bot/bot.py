@@ -50,6 +50,10 @@ def inline (call) -> None:
                               parse_mode="html", reply_markup=markup);
     elif (call.data == "activate"):
         walletDatabase = WalletDatabase(call.message.chat.id);
+        if (walletDatabase.isRegistered()):
+            call.data = "mainmenu";
+            inline(call);
+            return;
         walletDatabase.createWallet();
         call.data = "mainmenu";
         inline(call);
@@ -59,6 +63,7 @@ def inline (call) -> None:
         userSubscribes: tuple[int, float] = walletDatabase.getAll();
         dailyIncome: float = 0.0;
         unsubscribeCount: int = 0;
+        balance = walletDatabase.getBalance();
         for channelID, price in userSubscribes:
             status = bot.get_chat_member(chat_id=channelID, user_id=call.message.chat.id).status;
             if (status in ("member", "creator", "administrator")):
@@ -66,11 +71,11 @@ def inline (call) -> None:
             else:
                 unsubscribeCount += 1;
         markup = telebot.types.InlineKeyboardMarkup();
-        for text, callback in mainmenuButtons.items():
+        for text, callback in mainmenuButtons[language].items():
             btn = telebot.types.InlineKeyboardButton(text=text, callback_data=callback);
             markup.add(btn);
         bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                              text=(mainmenu % (call.message.chat.first_name, len(userSubscribes), dailyIncome)),
+                              text=(mainmenu[language] % (call.message.chat.first_name, len(userSubscribes), dailyIncome, balance)),
                               parse_mode="html", reply_markup=markup);
         if (unsubscribeCount != 0):
             bot.send_message(chat_id=call.message.chat.id, text=(breakIncome[language] % unsubscribeCount), parse_mode="html");
